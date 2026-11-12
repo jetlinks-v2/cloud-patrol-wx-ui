@@ -1,7 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createRenderer, computed, ref } from 'vue'
-import { useWebView } from '../mobile/useWebView.ts'
+import {loadTs} from './load-ts.mjs'
+const {useWebView}=await loadTs('mobile/useWebView.ts')
 
 test('WebView history handles native back, pending submissions, keyboard resize and cleanup', () => {
   const old = { window: globalThis.window, document: globalThis.document, history: globalThis.history }

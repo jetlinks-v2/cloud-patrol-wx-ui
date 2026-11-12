@@ -1,8 +1,10 @@
-import {inShell,setShellBack} from './shell/runtime.ts'
+import {inShell} from './shell/runtime'
+import {useShellNavigation} from './shell/navigation'
 import { onMounted, onUnmounted, ref, watch, type ComputedRef } from 'vue'
 
 /** 页面内跳转写入浏览器历史，使 WebView.goBack() 返回上一级；待确认提交禁止直接退出表单。 */
 export function useWebView(screen: ComputedRef<{ key: string; depth: number }>, locked: ComputedRef<boolean>, goBack: () => void) {
+  if (inShell()) useShellNavigation('/applications/patrol-app', () => screen.value.depth > 0, () => { if (!locked.value) goBack() }, () => !locked.value)
   const keyboardOpen = ref(false)
   let navigatingBack = false, ignorePop = false, baseline = 0
   const editable = () => document.activeElement?.matches('input:not([type=file]),textarea,[contenteditable=true]')
@@ -27,7 +29,6 @@ export function useWebView(screen: ComputedRef<{ key: string; depth: number }>, 
     else { ignorePop = true; history.go(current.depth - previous.depth) }
   }, { flush: 'sync' })
   onMounted(() => {
-    if(inShell())setShellBack(()=>{if(locked.value)return true;if(screen.value.depth>0){goBack();return true}return false})
     baseline = window.visualViewport?.height || window.innerHeight
     if(!inShell()){history.replaceState({ ...history.state, patrolScreen: screen.value.key }, '');window.addEventListener('popstate', popped)}
     window.addEventListener('resize', viewportChanged)
@@ -36,7 +37,6 @@ export function useWebView(screen: ComputedRef<{ key: string; depth: number }>, 
     document.addEventListener('focusout', viewportChanged)
   })
   onUnmounted(() => {
-    if(inShell())setShellBack(undefined)
     stop(); window.removeEventListener('popstate', popped); window.removeEventListener('resize', viewportChanged)
     window.visualViewport?.removeEventListener('resize', viewportChanged)
     document.removeEventListener('focusin', viewportChanged); document.removeEventListener('focusout', viewportChanged)

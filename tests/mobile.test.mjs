@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { answerErrors, submissionFor, newRequestId, imageAllowed } from '../mobile/model.ts'
+import {loadTs} from './load-ts.mjs'
+const {answerErrors,submissionFor,newRequestId,imageAllowed}=await loadTs('mobile/model.ts')
 import { pendingStore } from '../mobile/pending.ts'
 import { build } from 'esbuild'
 import { createRequire } from 'node:module'
