@@ -2,6 +2,14 @@
 
 巡更移动端独立仓库：`rain-bow02/cloud-patrol-wx-ui`。PC 菜单、管理页面及其权限定义仍在 `jetlinks-v2/cloud-patrol-ui`，后端仍使用物业仓库中的巡更服务。H5 独立安装、运行和发布，不依赖 PC 源码或 SaaS 桌面布局。
 
+## 官方统一外壳模块
+
+统一外壳入口为根目录 `index.ts`，模块 ID `patrol-app`，真实模板编码 `CloudPatrol`。以 Git Submodule 接入 `cloud.jetlinks.mobile/modules/cloud-patrol-wx-ui`，在主工程根目录运行 `pnpm install`、`pnpm dev:app patrol-app`、`pnpm build:app patrol-app`。正式产物是统一外壳与巡更模块的组合，输出到本仓库 `dist/`；项目和应用入口配置遵循[官方接入手册](https://github.com/jetlinks-v2/cloud.jetlinks.mobile/blob/2.20/docs/mobile-app-modules.md)。CI 固定外壳、业务仓库及共享锁版本。
+
+模块只消费 `useMobileAppContext()` 的项目、真实应用和官方请求，不读取独立登录凭据。`application` 为空时不查询业务；路由位于 `/applications/patrol-app` 下。物业所属项目仍须显式选择；巡更请求保留 `X-Patrol-Project`，不将平台项目编码当成物业项目。离线分区、资格和提交请求号继续使用原业务约定。模块卸载或上下文变化取消旧请求并清空页面状态。模块使用局部语言环境和样式；内部返回通过官方 `registerMobileAppBack` 交给外壳处理，嵌入模式不修改浏览器历史。
+
+`mobile/main.ts`、`Root.vue` 和自建登录按用户要求保留为独立调试入口，官方模块不会加载它们。下文的 npm 命令、独立部署和历史宿主 Bridge 说明仅适用于此调试入口。两种构建都写入 `dist/`，发布时须选择对应模式；独立构建不等于更新官方组合产物。
+
 ## 开发与构建
 
 使用 Node.js 22.18 或更高版本：

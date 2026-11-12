@@ -4,7 +4,7 @@ import SelectField from '../components/SelectField.vue'
 import { computed, reactive, ref, watch } from 'vue'
 import { Button, Switch } from 'vant'
 
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '../i18n'
 import type { ConfigEntity } from '../../api/types'
 import { categoryTree } from '../../model/categories'
 import MobileProjectFilter from '../components/MobileProjectFilter.vue'

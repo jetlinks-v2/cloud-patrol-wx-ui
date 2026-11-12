@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Button, Icon } from 'vant'
 
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '../i18n'
 import patrolScene from '../assets/patrol-scene.svg'
 import type { HomeTaskState } from '../home'
 defineProps<{ summary: { ready: number; cooldown: number; completed: number }; missed?: number; loading: boolean; failed: boolean; missedFailed: boolean; projectSelected: boolean }>()

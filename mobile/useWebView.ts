@@ -1,3 +1,4 @@
+import {inShell,setShellBack} from './shell/runtime.ts'
 import { onMounted, onUnmounted, ref, watch, type ComputedRef } from 'vue'
 
 /** 页面内跳转写入浏览器历史，使 WebView.goBack() 返回上一级；待确认提交禁止直接退出表单。 */
@@ -20,21 +21,22 @@ export function useWebView(screen: ComputedRef<{ key: string; depth: number }>, 
     try { goBack() } finally { navigatingBack = false }
   }
   const stop = watch(screen, (current, previous) => {
-    if (navigatingBack || current.key === previous.key) return
+    if (inShell() || navigatingBack || current.key === previous.key) return
     if (current.depth > previous.depth) history.pushState({ ...history.state, patrolScreen: current.key }, '')
     else if (current.depth === previous.depth) history.replaceState({ ...history.state, patrolScreen: current.key }, '')
     else { ignorePop = true; history.go(current.depth - previous.depth) }
   }, { flush: 'sync' })
   onMounted(() => {
+    if(inShell())setShellBack(()=>{if(locked.value)return true;if(screen.value.depth>0){goBack();return true}return false})
     baseline = window.visualViewport?.height || window.innerHeight
-    history.replaceState({ ...history.state, patrolScreen: screen.value.key }, '')
-    window.addEventListener('popstate', popped)
+    if(!inShell()){history.replaceState({ ...history.state, patrolScreen: screen.value.key }, '');window.addEventListener('popstate', popped)}
     window.addEventListener('resize', viewportChanged)
     window.visualViewport?.addEventListener('resize', viewportChanged)
     document.addEventListener('focusin', viewportChanged)
     document.addEventListener('focusout', viewportChanged)
   })
   onUnmounted(() => {
+    if(inShell())setShellBack(undefined)
     stop(); window.removeEventListener('popstate', popped); window.removeEventListener('resize', viewportChanged)
     window.visualViewport?.removeEventListener('resize', viewportChanged)
     document.removeEventListener('focusin', viewportChanged); document.removeEventListener('focusout', viewportChanged)

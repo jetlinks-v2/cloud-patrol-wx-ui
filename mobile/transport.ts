@@ -1,3 +1,4 @@
+import {inShell,shellRequest,shellState} from './shell/runtime'
 import { patrolProject } from './projectScope'
 import { reactive } from 'vue'
 import { MobileError } from './browserSession'
@@ -28,6 +29,7 @@ export const hostState = reactive<{ context?: MobileContext; error?: string }>({
 
 export const host: PatrolHost = {
   async context() {
+    if(inShell()){if(!hostState.context||shellState.error)throw new MobileError(401,shellState.error||'Mobile.hostSessionRequired');return hostState.context}
     if (hosted) {
       if (!window.patrolHost) throw new MobileError(503, 'Mobile.hostUnavailable')
       return window.patrolHost.context()
@@ -39,13 +41,14 @@ export const host: PatrolHost = {
       name: me.user.name, permissions: me.permissions }
   },
   request: (path, method, body, options) => {
+    if(inShell())return shellRequest(path,{method,body,headers:options?.projectId?{'X-Patrol-Project':options.projectId}:undefined})
     if (hosted) {
       if (!window.patrolHost) return Promise.reject(new MobileError(503, 'Mobile.hostUnavailable'))
       return window.patrolHost.request(path, method, body, options)
     }
     return sessionRequest(path, method, body, options)
   },
-  get back() { return window.patrolHost?.back?.bind(window.patrolHost) },
+  get back() { return inShell()?undefined:window.patrolHost?.back?.bind(window.patrolHost) },
 }
 let contextIdentity = ''
 let hostRevision = 0

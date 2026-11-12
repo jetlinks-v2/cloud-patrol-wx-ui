@@ -2,7 +2,7 @@
 import { Field } from 'vant'
 import SelectField from './SelectField.vue'
 import { computed, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '../i18n'
 import { Loading as Spin } from 'vant'
 
 import type { ConfigEntity } from '../../api/types'

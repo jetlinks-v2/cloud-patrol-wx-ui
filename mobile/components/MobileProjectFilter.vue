@@ -10,7 +10,7 @@ import { computed, onMounted, ref } from 'vue'
 import { Button } from 'vant'
 import SelectField from './SelectField.vue'
 
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '../i18n'
 import { request } from '../transport'
 import { patrolProject } from '../projectScope'
 import { projectTree, findOrganization, type OrganizationNode } from '../../model/projects'
@@ -25,7 +25,7 @@ async function load() {
   // 重新取授权树时不携带旧项目筛选，撤权或改为普通组织后仍可恢复选择。
   try { nodes.value = await request<OrganizationNode[]>('/park/patrol/projects/_tree', 'GET', undefined, '')
     const selected = findOrganization(nodes.value, selectedValue.value)
-    if (selectedValue.value && (!selected || projectTree([selected])[0].disabled)) select(undefined)
+    if (selectedValue.value && (!selected || projectTree([selected])[0]?.disabled)) select(undefined)
   } catch { failed.value = true; nodes.value = []; select(undefined) }
   finally { loading.value = false }
 }
@@ -33,7 +33,7 @@ function select(value: unknown) {
   const update = (id?: string) => props.local ? emit('update:value', id) : (patrolProject.value = id)
   if (typeof value !== 'string' || !value) { update(undefined); return }
   const node = findOrganization(nodes.value, value)
-  if (node && !projectTree([node])[0].disabled) update(value)
+  if (node && projectTree([node])[0]?.disabled===false) update(value)
 }
 onMounted(load)
 </script>

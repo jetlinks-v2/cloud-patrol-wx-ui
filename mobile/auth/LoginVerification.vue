@@ -8,7 +8,7 @@ import Pbkdf2Worker from 'altcha/workers/pbkdf2?worker'
 import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { Button, Loading as Spin, Dialog } from 'vant'
 import Alert from '../components/Notice.vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '../i18n'
 import type { CaptchaRequirement, CaptchaResult } from './useLogin'
 import { useLoginVerification } from './useLoginVerification'
 interface Widget extends HTMLElement { configure(options: Record<string, unknown>): Promise<void> }

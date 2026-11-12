@@ -17,7 +17,7 @@ export function usePointScanner(resolve: (raw: string) => Promise<MobileTask[]>,
       const rows = await resolve(raw)
       if (current.signal.aborted) return
       matches.value = rows
-      if (rows.length === 1) select(rows[0])
+      if (rows.length === 1 && rows[0]) select(rows[0])
       else if (!rows.length) error.value = 'Mobile.scanNoTask'
     } catch (cause) {
       if (!current.signal.aborted) error.value = cause instanceof Error && cause.message.startsWith('Mobile.')

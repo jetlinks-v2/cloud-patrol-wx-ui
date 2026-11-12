@@ -23,7 +23,9 @@
     "mobile/**/*.ts",
     "mobile/**/*.vue",
     "api/**/*.ts",
-    "model/**/*.ts"
+    "model/**/*.ts",
+    "index.ts",
+    "types/**/*.d.ts"
   ],
   "exclude": [
     "node_modules",

@@ -2,7 +2,7 @@
 import { onMounted, ref, watch } from 'vue'
 import { Button, ConfigProvider, Loading as Spin } from 'vant'
 import Alert from './components/Notice.vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from './i18n'
 import App from './App.vue'
 import LoginPage from './auth/LoginPage.vue'
 import { authState, clearSession, initializeConfig, restoreSession, requestedApplicationId } from './auth/session'

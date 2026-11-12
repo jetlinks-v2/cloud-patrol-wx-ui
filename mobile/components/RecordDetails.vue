@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Image from './EvidenceImage.vue'
 import { watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '../i18n'
 import type { Execution } from '../../api/types'
 import { enumValue, answerIsAbnormal } from '../../model/standards'
 import { dateTime } from '../../model/display'
@@ -26,7 +26,7 @@ watch(() => props.record, record => { for (const id of new Set(record.answers.ma
     <h3><span class="item-no">{{ index + 1 }}</span>{{ item.title }}</h3>
     <p v-if="record.answers.find(answer => answer.itemId === item.id)?.value || !record.answers.find(answer => answer.itemId === item.id)?.attachmentId" :class="['record-answer', { 'result-fail': answerIsAbnormal(item, record.answers.find(answer => answer.itemId === item.id)) }]">{{ record.answers.find(answer => answer.itemId === item.id)?.value || t('Mobile.noAnswer') }}</p>
     <template v-for="answer in record.answers.filter(answer => answer.itemId === item.id && answer.attachmentId)" :key="answer.itemId">
-      <Image v-if="images[answer.attachmentId!]" class="evidence" :width="160" :src="images[answer.attachmentId!]" :alt="t('Mobile.attachment')" />
+      <Image v-if="images[answer.attachmentId!]" class="evidence" :width="160" :src="images[answer.attachmentId!]||''" :alt="t('Mobile.attachment')" />
       <button v-else type="button" class="text-button" @click="emit('preview', answer.attachmentId!)">{{ t('Mobile.attachment') }}</button>
     </template>
   </section>

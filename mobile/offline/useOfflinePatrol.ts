@@ -110,7 +110,7 @@ export function useOfflinePatrol() {
       await assertCurrent()
       const row = selected.value, entry = queueEntry(row, answers.value, remark.value, photos, newRequestId(), Date.now())
       entry.images = Object.fromEntries(row.task.standardSnapshot.filter(item => item.exampleFileId && data.value.images[item.exampleFileId])
-        .map(item => [item.exampleFileId!, data.value.images[item.exampleFileId!]]))
+        .map(item => [item.exampleFileId!, data.value.images[item.exampleFileId!]!]))
       data.value = await store.update(data => {
         const reason = collectReason(row, data, entry.submission.collectedTime!)
         if (reason) throw new Error(reason)

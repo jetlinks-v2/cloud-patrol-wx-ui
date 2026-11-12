@@ -2,13 +2,13 @@
 import { Field } from 'vant'
 import SelectField from './components/SelectField.vue'
 import DateField from './components/DateField.vue'
+import {inShell} from './shell/runtime'
 import { authState } from './auth/session'
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Button, ConfigProvider, Loading as Spin } from 'vant'
 import Alert from './components/Notice.vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from './i18n'
 import { businessTime, dateTime } from '../model/display'
-import { enumValue } from '../model/standards'
 import CheckForm from './components/CheckForm.vue'
 import RecordDetails from './components/RecordDetails.vue'
 import PointGrid from './components/PointGrid.vue'
@@ -65,7 +65,7 @@ function back() {
   else if (tab.value === 'manage' && managementScreen.value.depth > 1) management.value?.back()
   else if (tab.value !== 'home') { date.value = businessTime().format('YYYY-MM-DD'); tab.value = 'home' }
   else if (host.back) host.back()
-  else if (window.history.length > 1) window.history.back()
+  else if (!inShell() && window.history.length > 1) window.history.back()
 }
 function beforeUnload(event: BeforeUnloadEvent) {
   if (selected.value && (draft.value.pending || draft.value.remark || draft.value.answers.some(answer => answer.value || answer.attachmentId))) {

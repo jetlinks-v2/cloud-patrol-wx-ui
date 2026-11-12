@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { Button, Cell, Checkbox, CheckboxGroup, Empty, Field, Popup, Search } from 'vant'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from '../i18n'
 interface Option { value?: string; key?: string; id?: string; label?: string; title?: string; name?: string; disabled?: boolean; children?: Option[] }
 const props = defineProps<{ modelValue?: string | string[]; options: Option[]; placeholder?: string; disabled?: boolean; multiple?: boolean; clearable?: boolean; label?: string }>()
 const emit = defineEmits<{ 'update:modelValue': [value: string | string[] | undefined] }>()

@@ -32,7 +32,7 @@ export async function syncEntry(store: OfflineStore, id: string, projectId: stri
       await persist(row => {
         row.payload = { ...row.submission, answers: row.submission.answers.map(answer => ({ ...answer,
           attachmentId: answer.attachmentId ? row.receipts[answer.attachmentId] : null })) }
-        if (row.payload.answers.some((answer, index) => row.submission.answers[index].attachmentId && !answer.attachmentId)) throw new Error('Mobile.offlinePhotoMissing')
+        if (row.payload.answers.some((answer, index) => row.submission.answers[index]?.attachmentId && !answer.attachmentId)) throw new Error('Mobile.offlinePhotoMissing')
       })
     }
     await assertCurrent()
