@@ -1,6 +1,6 @@
 # 物业智能巡更 H5
 
-巡更移动端独立仓库：`rain-bow02/cloud-patrol-wx-ui`。PC 菜单、管理页面及其权限定义仍在 `jetlinks-v2/cloud-patrol-ui`，后端仍使用物业仓库中的巡更服务。H5 独立安装、运行和发布，不依赖 PC 源码或 SaaS 桌面布局。
+巡更移动端独立仓库：`jetlinks-v2/cloud-patrol-wx-ui`。PC 菜单、管理页面及其权限定义仍在 `jetlinks-v2/cloud-patrol-ui`，后端仍使用物业仓库中的巡更服务。H5 独立安装、运行和发布，不依赖 PC 源码或 SaaS 桌面布局。
 
 ## 官方统一外壳模块
 
