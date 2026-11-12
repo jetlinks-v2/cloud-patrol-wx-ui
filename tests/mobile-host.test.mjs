@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import { build } from 'esbuild'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
-const bundle = await build({stdin:{contents:"export * from './mobile/transport';export {patrolProject} from './mobile/projectScope'",resolveDir:fileURLToPath(new URL('..',import.meta.url))},bundle:true,write:false,platform:'node',format:'cjs',external:['vue'],define:{'import.meta.env.BASE_URL':JSON.stringify('/patrol-h5/')}})
+import { computed } from 'vue'
+const bundle = await build({stdin:{contents:"export * from './mobile/transport';export {patrolProject} from './mobile/projectScope';export {bindShell} from './mobile/shell/runtime'",resolveDir:fileURLToPath(new URL('..',import.meta.url))},bundle:true,write:false,platform:'node',format:'cjs',external:['vue'],define:{'import.meta.env.BASE_URL':JSON.stringify('/patrol-h5/')}})
 async function fixture(run,{bridge=true}={}) {
   const before=Object.fromEntries(['window','fetch'].map(key=>[key,globalThis[key]]))
   let context={userId:'employee',applicationId:'selected-app',environmentId:'saas-project',permissions:[]},calls=[]
@@ -14,6 +15,26 @@ async function fixture(run,{bridge=true}={}) {
   try {await run({...module.exports,calls,change:value=>{context={...context,...value}},getContext:handler=>{getContext=handler},respond:handler=>{respond=handler}})}
   finally {for(const [key,value] of Object.entries(before)){if(value===undefined)delete globalThis[key];else globalThis[key]=value}}
 }
+
+test('current shell rejection statuses reach patrol without turning network failures into rejections',()=>fixture(async vm=>{
+  let failure
+  const dispose=vm.bindShell({
+    project:computed(()=>({code:'project',name:'项目'})),
+    application:computed(()=>({id:'app',name:'巡更',templateId:'template',templateCode:'CloudPatrol'})),
+    request:async()=>{throw failure},
+  },['CloudPatrol'])
+  vm.hostState.context={userId:'employee',applicationId:'app'}
+  try {
+    for (const [httpStatus,businessCode,status] of [[400,400,400],[200,403,403],[408,408,408],[503,undefined,503]]) {
+      failure=Object.assign(Error('rejected'),{httpStatus,businessCode})
+      await assert.rejects(vm.request('/park/patrol/executions'),error=>error instanceof vm.MobileError&&error.status===status)
+    }
+    failure=Error('network outcome unknown')
+    await assert.rejects(vm.request('/park/patrol/executions'),error=>error===failure)
+    failure=Object.assign(Error('cancelled'),{name:'AbortError'})
+    await assert.rejects(vm.request('/park/patrol/executions'),error=>error===failure)
+  } finally {dispose()}
+}))
 
 test('APP初始化等待上下文，选中应用可无业务权限；SaaS项目不自动变成物业所属项目',()=>fixture(async vm=>{
   let finish;vm.getContext(()=>new Promise(resolve=>{finish=resolve}))

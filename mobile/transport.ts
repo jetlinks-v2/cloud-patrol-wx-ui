@@ -40,8 +40,22 @@ export const host: PatrolHost = {
     return { userId: me.user.id, applicationId: session.applicationId,
       name: me.user.name, permissions: me.permissions }
   },
-  request: (path, method, body, options) => {
-    if(inShell())return shellRequest(path,{method,body,headers:options?.projectId?{'X-Patrol-Project':options.projectId}:undefined})
+  request: async (path, method, body, options) => {
+    if(inShell()) {
+      try { return await shellRequest(path,{method,body,headers:options?.projectId?{'X-Patrol-Project':options.projectId}:undefined}) }
+      catch (cause) {
+        // The public host reports ApiError fields, not our MobileError class.
+        // Preserve explicit rejections so they release the submission lock;
+        // unknown network outcomes must retain their pending idempotent request.
+        if (cause instanceof Error && cause.name !== 'AbortError') {
+          const error = cause as Error & { businessCode?: unknown; httpStatus?: number }
+          const status = typeof error.businessCode === 'number' && error.businessCode >= 400 && error.businessCode < 600
+            ? error.businessCode : error.httpStatus
+          if (typeof status === 'number' && status >= 400 && status < 600) throw new MobileError(status, cause.message)
+        }
+        throw cause
+      }
+    }
     if (hosted) {
       if (!window.patrolHost) return Promise.reject(new MobileError(503, 'Mobile.hostUnavailable'))
       return window.patrolHost.request(path, method, body, options)
