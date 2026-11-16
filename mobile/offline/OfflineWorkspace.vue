@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import {inject,ref as popupRef} from 'vue'
+const popupTarget=inject('business-popup-target',popupRef<HTMLElement|string>('body'))
 import { Field } from 'vant'
 import { computed, watch } from 'vue'
 import { Button, Empty, Radio, Loading as Spin, RadioGroup, showConfirmDialog, Switch, Tag } from 'vant'
@@ -20,7 +22,7 @@ watch(busy, value => emit('busy', value), { immediate: true })
 watch([selected, viewed], () => emit('screen', { key: active.value ? `offline:${active.value.task.id}` : 'offline', depth: active.value ? 2 : 1 }), { immediate: true })
 function back() {
   if (busy.value) return
-  if (dirty.value) void showConfirmDialog({ title: t('Mobile.offlineDiscardTitle'), message: t('Mobile.offlineDiscardHint'), confirmButtonText: t('Mobile.offlineDiscard'), cancelButtonText: t('Mobile.back') }).then(close).catch(() => {})
+  if (dirty.value) void showConfirmDialog({ teleport: popupTarget.value, title: t('Mobile.offlineDiscardTitle'), message: t('Mobile.offlineDiscardHint'), confirmButtonText: t('Mobile.offlineDiscard'), cancelButtonText: t('Mobile.back') }).then(close).catch(() => {})
   else close()
 }
 defineExpose({ back })

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import {inject,ref as popupRef} from 'vue'
+const popupTarget=inject('business-popup-target',popupRef<HTMLElement|string>('body'))
 import { Field } from 'vant'
 import SelectField from './SelectField.vue'
 import DateField from './DateField.vue'
@@ -42,11 +44,11 @@ watch(state, () => { selection.value = [] })
     <Button v-if="missedState(item) === 'pending' && item.applicantId === userId" type="primary" plain size="small" :disabled="saving" @click="withdraw(item)">{{ t('Patrol.missed.withdraw') }}</Button>
   </section>
   <Button block type="primary" :disabled="!submittable || saving" @click="reason = ''; invalid = false; open = true">{{ t('Patrol.missed.apply') }} ({{ selection.length }})</Button>
-  <Dialog :show="open" show-cancel-button :before-close="action => action === 'cancel' ? !saving : false" :title="t('Patrol.missed.apply')" :confirm-button-text="t('Mobile.confirm')" :cancel-button-text="t('Mobile.cancel')"  :close-on-click-overlay="false" @confirm="apply" @cancel="!saving && (open = false)">
+  <Dialog :teleport="popupTarget" :show="open" show-cancel-button :before-close="action => action === 'cancel' ? !saving : false" :title="t('Patrol.missed.apply')" :confirm-button-text="t('Mobile.confirm')" :cancel-button-text="t('Mobile.cancel')"  :close-on-click-overlay="false" @confirm="apply" @cancel="!saving && (open = false)">
     <Field type="textarea" v-model="reason" :rows="4" :maxlength="500" show-word-limit :placeholder="t('Patrol.missed.reason')" />
     <Alert v-if="invalid" type="error" :message="t('Patrol.missed.reasonRequired')" />
   </Dialog>
-  <Dialog :show="!!events" :title="t('Patrol.missed.history')" :confirm-button-text="t('Mobile.confirm')" @confirm="events = undefined">
+  <Dialog :teleport="popupTarget" :show="!!events" :title="t('Patrol.missed.history')" :confirm-button-text="t('Mobile.confirm')" @confirm="events = undefined">
     <div class="dialog-body"><Spin v-if="historyLoading" /><div v-for="event in events" :key="event.id" class="panel">
       <p>{{ t(`Patrol.missed.actions.${event.action}`) }} · {{ event.actorName || '—' }}</p>
       <p>{{ dateTime(event.createTime) }}</p><p>{{ event.remark || '—' }}</p>

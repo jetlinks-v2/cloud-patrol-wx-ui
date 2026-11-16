@@ -4,7 +4,7 @@ import SelectField from './components/SelectField.vue'
 import DateField from './components/DateField.vue'
 import {inShell} from './shell/runtime'
 import { authState } from './auth/session'
-import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, inject, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Button, ConfigProvider, Loading as Spin } from 'vant'
 import Alert from './components/Notice.vue'
 import { useI18n } from './i18n'
@@ -50,7 +50,8 @@ const screen = computed(() => ({
   depth: offlineOpen.value ? offlineScreen.value.depth : missedOpen.value ? (tab.value === 'home' ? 1 : 2) : scanOpen.value ? 2 : selected.value || record.value ? (point.value ? 3 : tab.value === 'home' ? 1 : 2) : point.value ? 2 : tab.value === 'manage' ? managementScreen.value.depth : tab.value === 'home' ? 0 : 1,
 }))
 const { keyboardOpen } = useWebView(screen, computed(() => locked.value || missedBusy.value || managementBusy.value || offlineBusy.value), back)
-watch(() => screen.value.key, () => { void nextTick(() => window.scrollTo(0, 0)) })
+const scrollTop = inject('business-scroll-top', () => window.scrollTo(0, 0))
+watch(() => screen.value.key, () => { void nextTick(scrollTop) })
 const heading = computed(() => t(offlineOpen.value ? 'Mobile.offlineTitle' : scanOpen.value ? nfcMode.value ? 'Mobile.nfcTitle' : 'Mobile.scanTitle' : missedOpen.value ? 'Patrol.missed.title' : selected.value ? 'Mobile.inspectionTitle' : record.value ? 'Mobile.recordTitle'
   : point.value ? 'Mobile.pointDetails' : tab.value === 'manage' ? managementScreen.value.title : tab.value === 'home' ? 'Mobile.homeTitle' : tab.value === 'history' ? 'Mobile.historyTitle' : 'Mobile.pointsTitle'))
 let timer: ReturnType<typeof setInterval>

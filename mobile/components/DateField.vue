@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import {inject,ref as popupRef} from 'vue'
+const popupTarget=inject('business-popup-target',popupRef<HTMLElement|string>('body'))
 import { ref, watch } from 'vue'
 import { DatePicker, Field, Popup } from 'vant'
 import { businessTime } from '../../model/display'
@@ -11,7 +13,7 @@ function confirm({ selectedValues }: { selectedValues: (string | number)[] }) { 
 </script>
 <template>
   <Field :model-value="modelValue" :label="label" readonly is-link :disabled="disabled" @click="!disabled && (show = true)" />
-  <Popup v-model:show="show" position="bottom" round safe-area-inset-bottom teleport="body">
+  <Popup v-model:show="show" position="bottom" round safe-area-inset-bottom :teleport="popupTarget">
     <DatePicker v-model="values" :title="label" :min-date="asDate(min) || new Date(1970, 0, 1)" :max-date="asDate(max) || new Date(2100, 11, 31)" @confirm="confirm" @cancel="show = false" />
   </Popup>
 </template>
