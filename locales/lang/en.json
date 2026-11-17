@@ -546,6 +546,18 @@
       "busy": "Too many export jobs. Please try again later.",
       "not_ready": "The file is not ready. Please try again later.",
       "failed": "Patrol record export failed. Please try again later."
+    },
+    "geo": {
+      "longitude": "Longitude",
+      "latitude": "Latitude",
+      "coordinates": "Check-in coordinates",
+      "address": "Location address",
+      "range": "Check-in radius",
+      "rangeHint": "Radius around the point, default 100 m. Location is advisory and does not block submission.",
+      "meters": "m",
+      "coordinatePair": "Enter longitude and latitude together",
+      "distance": "Distance to point",
+      "accuracy": "Location accuracy"
     }
   }
 }

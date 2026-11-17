@@ -18,7 +18,7 @@ export function answerErrors(items: CheckItem[], answers: Answer[]): Record<stri
   return errors
 }
 export function submissionFor(task: Task, answers: Answer[], remark: string, requestId: string, metadata: CollectionMetadata): Submission {
-  return { taskId: task.id, requestId, collectedTime: metadata.collectedTime, networkStatus: metadata.networkStatus, remark: remark.trim(), answers: task.standardSnapshot.map(item => {
+  return { taskId: task.id, requestId, collectedTime: metadata.collectedTime, networkStatus: metadata.networkStatus, ...(metadata.location ? { location: { ...metadata.location } } : {}), remark: remark.trim(), answers: task.standardSnapshot.map(item => {
     const answer = answers.find(value => value.itemId === item.id)
     return { itemId: item.id, value: itemType(item) === 'image' ? null : answer?.value?.trim() || null,
       attachmentId: answer?.attachmentId || null }

@@ -10,7 +10,7 @@ test('H5未选项目不查询，选定后按项目查询，清空项目后旧响
   const result = await build({
     stdin: { contents: `export { useMobilePatrol } from './mobile/useMobilePatrol.ts'; export { patrolProject } from './mobile/projectScope.ts'`,
       resolveDir: fileURLToPath(new URL('..', import.meta.url)) },
-    bundle: true, write: false, platform: 'node', format: 'cjs', external: ['vue'],
+    bundle: true, define: { 'import.meta.env.VITE_PATROL_LOCATION_MODE': '"demo"' }, write: false, platform: 'node', format: 'cjs', external: ['vue'],
     plugins: [{ name: 'project-query-boundary', setup(builder) {
       builder.onResolve({ filter: /^\.\/(api|transport)$/ }, args => args.importer.endsWith('useMobilePatrol.ts')
         ? { path: args.path, namespace: 'fixture' } : undefined)

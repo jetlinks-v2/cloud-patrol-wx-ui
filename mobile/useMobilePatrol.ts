@@ -9,10 +9,12 @@ import { historyQuery, type HistoryFilters } from './history'
 import { matchScannedTasks, scannedPointId } from './scan/match'
 import { canManage } from './management/model'
 import { patrolProject } from './projectScope'
+import { usePatrolLocation } from './location'
 
 interface Draft { answers: Answer[]; remark: string; pending?: Submission }
 /** 页面会话保存草稿；响应丢失后锁定原请求体与请求号，重试不会创建第二次巡更。 */
 export function useMobilePatrol() {
+  const location = usePatrolLocation()
   const context = ref<MobileContext>(), date = ref(businessTime().format('YYYY-MM-DD'))
   const tab = ref<'home' | 'tasks' | 'history' | 'manage'>('home'), rows = ref<MobileTask[]>([]), records = ref<Execution[]>([])
   const missedCount = ref<number>(), missedError = ref(false)
@@ -62,6 +64,7 @@ export function useMobilePatrol() {
       if (unresolved) {
         open(unresolved.row)
         draft.value = { answers: unresolved.submission.answers, remark: unresolved.submission.remark, pending: unresolved.submission }
+        location.open(unresolved.row.task, unresolved.submission.location, true)
         error.value = 'Mobile.submitUncertain'
         return
       }
@@ -148,9 +151,11 @@ export function useMobilePatrol() {
     selected.value = row; record.value = undefined; success.value = undefined; error.value = ''; errors.value = {}
     draft.value = drafts.get(row.task.id) || { answers: row.task.standardSnapshot.map(item => ({ itemId: item.id })), remark: '' }
     drafts.set(row.task.id, draft.value)
+    location.open(row.task, draft.value.pending?.location, !!draft.value.pending)
   }
   function leave() {
     if (sending.value || uploading.value || draft.value.pending) return
+    location.clear()
     selected.value = undefined; record.value = undefined; success.value = undefined; error.value = ''
     void load()
   }
@@ -199,7 +204,7 @@ export function useMobilePatrol() {
       errors.value = answerErrors(selected.value.task.standardSnapshot, draft.value.answers)
       if (Object.keys(errors.value).length) return
       // 只在首次提交取样；响应丢失后重试沿用原始采集信息，不以重试时间覆盖。
-      draft.value.pending = submissionFor(selected.value.task, draft.value.answers, draft.value.remark, newRequestId(), { collectedTime: Date.now(), networkStatus: navigator.onLine ? 'online' : 'offline' })
+      draft.value.pending = submissionFor(selected.value.task, draft.value.answers, draft.value.remark, newRequestId(), { collectedTime: Date.now(), networkStatus: navigator.onLine ? 'online' : 'offline', location: location.evidence.value ? { ...location.evidence.value } : undefined })
       // 缓存写入失败时不发送，避免响应丢失且刷新后无法恢复同一次请求。
       try {
         if (!context.value) throw new Error('Mobile.sessionRequired')
@@ -220,6 +225,6 @@ export function useMobilePatrol() {
       } else error.value = 'Mobile.submitUncertain'
     } finally { sending.value = false }
   }
-  return { context, date, tab, mine, missedCount, missedError, historyScope, canReadProjectHistory, people, categories, levels, historyFilters, filterError, searchHistory, loadHistoryOptions, rows, records, selected, record, success, loading, sending, uploading,
+  return { location, context, date, tab, mine, missedCount, missedError, historyScope, canReadProjectHistory, people, categories, levels, historyFilters, filterError, searchHistory, loadHistoryOptions, rows, records, selected, record, success, loading, sending, uploading,
     error, draft, errors, images, total, locked, reason, load, open, leave, changeAnswer, upload, preview, submit, scanPoint, scanNfc }
 }

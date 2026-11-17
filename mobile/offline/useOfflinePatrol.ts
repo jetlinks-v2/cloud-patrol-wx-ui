@@ -4,6 +4,7 @@ import { businessTime } from '../../model/display'
 import { answerErrors, imageAllowed, newRequestId, type MobileTask } from '../model'
 import { resolveContext } from '../transport'
 import { patrolProject } from '../projectScope'
+import { usePatrolLocation } from '../location'
 import * as api from '../api'
 import { collectReason, emptyOfflineData, offlineKey, queueEntry, type OfflineIdentity, type OfflinePhoto, type OfflineEntry } from './model'
 import { offlineStore, type OfflineStore } from './store'
@@ -11,6 +12,7 @@ import { syncEntry } from './sync'
 
 /** 独立离线工作区只管理本机缓存，不混入在线任务统计；写入仍使用现有后端资格校验。 */
 export function useOfflinePatrol() {
+  const location = usePatrolLocation()
   const data = shallowRef(emptyOfflineData()), selected = shallowRef<MobileTask>(), viewed = shallowRef<OfflineEntry>()
   const answers = ref<Answer[]>([]), remark = ref(''), photos: Record<string, OfflinePhoto> = {}
   const images = ref<Record<string, string>>({}), errors = ref<Record<string, string>>({}), error = ref(''), notice = ref('')
@@ -79,9 +81,10 @@ export function useOfflinePatrol() {
     if (busy.value || reason(row)) return
     workingOffline.value = true
     clearPhotos(); selected.value = row; viewed.value = undefined; errors.value = {}; error.value = ''; notice.value = ''
+    location.open(row.task)
     answers.value = row.task.standardSnapshot.map(item => ({ itemId: item.id })); remark.value = ''
   }
-  function close() { selected.value = undefined; viewed.value = undefined; clearPhotos(); answers.value = []; remark.value = ''; errors.value = {} }
+  function close() { location.clear(); selected.value = undefined; viewed.value = undefined; clearPhotos(); answers.value = []; remark.value = ''; errors.value = {} }
   function answer(id: string, value: string) {
     const row = answers.value.find(row => row.itemId === id)
     if (row) row.value = value
@@ -108,7 +111,7 @@ export function useOfflinePatrol() {
     saving.value = true; error.value = ''
     try {
       await assertCurrent()
-      const row = selected.value, entry = queueEntry(row, answers.value, remark.value, photos, newRequestId(), Date.now())
+      const row = selected.value, entry = queueEntry(row, answers.value, remark.value, photos, newRequestId(), Date.now(), location.evidence.value ? { ...location.evidence.value } : undefined)
       entry.images = Object.fromEntries(row.task.standardSnapshot.filter(item => item.exampleFileId && data.value.images[item.exampleFileId])
         .map(item => [item.exampleFileId!, data.value.images[item.exampleFileId!]!]))
       data.value = await store.update(data => {
@@ -167,6 +170,6 @@ export function useOfflinePatrol() {
     disposed = true; clearInterval(timer); clearPhotos()
     window.removeEventListener('online', networkChanged); window.removeEventListener('offline', networkChanged); window.removeEventListener('beforeunload', beforeUnload)
   })
-  return { data, selected, viewed, answers, remark, images, errors, error, notice, loading, downloading, saving, syncing,
+  return { location, data, selected, viewed, answers, remark, images, errors, error, notice, loading, downloading, saving, syncing,
     networkOnline, workingOffline, now, tab, keyword, busy, canNetwork, pending, filtered, dirty, download, reason, open, close, answer, photo, save, view, sync }
 }

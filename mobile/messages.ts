@@ -1,4 +1,5 @@
 export const zh = {
+  geo: { updateCoordinates: '更新经纬度', title: '定位信息', rangeLabel: '允许范围 {value} 米', inside: '范围内', outside: '范围外', inaccurate: '定位精度较低', unknown: '待定位', refresh: '重新定位', pointNearby: '点位附近', advisory: '定位仅作辅助参考' },
   applicationEntryRequired: '请从具体巡更应用的手机端入口打开，或返回APP选择应用。',
   hostUnavailable: 'APP未提供巡更访问上下文，请返回APP重新打开应用。',
   hostSessionRequired: 'APP登录状态已失效，请返回APP重新登录后打开应用。',
@@ -82,6 +83,7 @@ export const zh = {
   draftHint: '离开本页会丢失未提交内容。', retry: '重新加载', evidenceRequired: '需附图',
 }
 export const en: { [K in keyof typeof zh]: typeof zh[K] extends string ? string : Record<keyof typeof zh[K], string> } = {
+  geo: { updateCoordinates: 'Update coordinates', title: 'Location', rangeLabel: 'Allowed radius {value} m', inside: 'Within range', outside: 'Outside range', inaccurate: 'Low accuracy', unknown: 'Pending location', refresh: 'Locate again', pointNearby: 'Near the point', advisory: 'Location is for reference' },
   applicationEntryRequired: 'Open the mobile entry of a specific patrol application, or return to the app to select one.',
   hostUnavailable: 'The app has not provided patrol access context. Return to the app and reopen this application.',
   hostSessionRequired: 'Your app session has expired. Return to the app, sign in and reopen this application.',

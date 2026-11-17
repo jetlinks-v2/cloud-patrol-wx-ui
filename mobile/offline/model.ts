@@ -1,4 +1,4 @@
-import type { Answer, Execution } from '../../api/types'
+import type { Answer, Execution, LocationEvidence } from '../../api/types'
 import { answerErrors, submissionFor, type MobileTask, type Submission } from '../model'
 
 export interface OfflineIdentity { applicationId: string; userId: string; projectId: string }
@@ -43,9 +43,9 @@ export function collectReason(row: MobileTask, data: OfflineData, now: number): 
   if (row.reason === 'error.patrol.execution.cooldown' && row.task.cooldownMinutes == null) return 'Mobile.offlineRefreshRequired'
   return ''
 }
-export function queueEntry(row: MobileTask, answers: Answer[], remark: string, photos: Record<string, OfflinePhoto>, id: string, now: number): OfflineEntry {
+export function queueEntry(row: MobileTask, answers: Answer[], remark: string, photos: Record<string, OfflinePhoto>, id: string, now: number, location?: LocationEvidence): OfflineEntry {
   if (Object.keys(answerErrors(row.task.standardSnapshot, answers)).length) throw new Error('Mobile.offlineIncomplete')
-  const submission = submissionFor(row.task, answers, remark, id, { collectedTime: now, networkStatus: 'offline' })
+  const submission = submissionFor(row.task, answers, remark, id, { collectedTime: now, networkStatus: 'offline', location })
   const needed: Record<string, OfflinePhoto> = {}
   for (const answer of submission.answers) if (answer.attachmentId) {
     const photo = photos[answer.attachmentId]

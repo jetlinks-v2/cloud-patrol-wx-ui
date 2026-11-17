@@ -40,7 +40,7 @@ onMounted(() => { void start() })
 <template>
   <ConfigProvider :theme-vars="{ primaryColor: '#2979ff' }">
     <div v-if="!ready" class="auth-loading"><Spin>{{ t('Mobile.loading') }}</Spin></div>
-    <section v-else-if="configError || hostState.error" class="patrol-config-error panel"><Alert type="error" show-icon :message="te(hostState.error || configError) ? t(hostState.error || configError) : hostState.error || configError" /><Button v-if="hosted && host.back" block @click="host.back()">{{ t('Mobile.backToApp') }}</Button><Button block @click="start">{{ t('Mobile.retry') }}</Button></section>
+    <section v-else-if="configError || hostState.error" class="patrol-config-error panel"><Alert type="error" inline show-icon :message="te(hostState.error || configError) ? t(hostState.error || configError) : hostState.error || configError" /><Button v-if="hosted && host.back" block @click="host.back()">{{ t('Mobile.backToApp') }}</Button><Button block @click="start">{{ t('Mobile.retry') }}</Button></section>
     <App v-else-if="hosted || authState.session && authState.authorization" :key="hosted ? hostState.context?.applicationId : authState.session?.applicationId" :standalone="!hosted" :logging-out="loggingOut" @logout="signOut" />
     <LoginPage v-else :notice="notice" />
   </ConfigProvider>

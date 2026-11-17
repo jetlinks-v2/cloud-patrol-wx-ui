@@ -29,7 +29,7 @@ function chooseFile(event: Event) {
     <input v-if="!nfc" ref="fileInput" class="scan-file-input" type="file" accept="image/*" :aria-label="t('Mobile.scanSelectFile')" @change="chooseFile" />
     <Button v-if="!nfc" block :disabled="scanning || busy" @click="fileInput?.click()">{{ t('Mobile.scanSelectFile') }}</Button>
     <Spin v-if="scanning || busy" >{{ t(scanning ? 'Mobile.scanWaiting' : 'Mobile.scanMatching') }}</Spin>
-    <Alert v-if="error" type="warning" show-icon :message="t(error)" />
+    <Alert v-if="error" type="warning" floating @update:message="error=''" show-icon :message="t(error)" />
     <template v-if="matches.length > 1">
       <h3>{{ t('Mobile.scanChoose') }}</h3>
       <section v-for="row in matches" :key="row.task.id" class="scan-task">

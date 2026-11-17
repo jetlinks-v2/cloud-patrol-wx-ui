@@ -10,6 +10,7 @@ import Alert from './components/Notice.vue'
 import { useI18n } from './i18n'
 import { businessTime, dateTime } from '../model/display'
 import CheckForm from './components/CheckForm.vue'
+import LocationPanel from './components/LocationPanel.vue'
 import RecordDetails from './components/RecordDetails.vue'
 import PointGrid from './components/PointGrid.vue'
 import MobileProjectFilter from './components/MobileProjectFilter.vue'
@@ -33,7 +34,7 @@ const missingQueryPermission = computed(() => {
   return context && !context.permissions?.some(permission =>
     ['patrol-task', 'patrol-point'].includes(permission.id) && permission.actions.includes('query'))
 })
-const { date, tab, mine, missedCount, missedError, historyScope, canReadProjectHistory, people, categories, levels, historyFilters, filterError, searchHistory, loadHistoryOptions, rows, records, selected, record, success, loading, sending, uploading,
+const { location: patrolLocation, date, tab, mine, missedCount, missedError, historyScope, canReadProjectHistory, people, categories, levels, historyFilters, filterError, searchHistory, loadHistoryOptions, rows, records, selected, record, success, loading, sending, uploading,
   error, draft, errors, images, total, locked, reason, load, open, leave, changeAnswer, upload, preview, submit, scanPoint, scanNfc } = useMobilePatrol()
 const point = ref<PointGroup>(), now = ref(Date.now()), missedOpen = ref(false), missedBusy = ref(false), scanOpen = ref(false), nfcMode = ref(false)
 const offlineOpen = ref(false)
@@ -125,7 +126,7 @@ onUnmounted(() => {
         <Alert v-if="missingQueryPermission" class="notice" type="warning" :message="t('Mobile.applicationQueryPermissionMissing')" />
         <MobileProjectFilter v-if="!detail && !(tab === 'manage' && managementScreen.depth > 1)" :disabled="locked || loading || managementBusy" />
         <Alert v-if="!patrolProject && !offlineOpen" class="notice" type="info" show-icon :message="t('Mobile.chooseProjectFirst')" />
-        <Alert v-if="error" class="notice" type="error" show-icon :message="te(error) ? t(error) : error" />
+        <Alert v-if="error" :inline="error==='Mobile.submitUncertain'" class="notice" type="error" show-icon :message="te(error) ? t(error) : error" />
         <OfflineWorkspace v-if="offlineOpen" ref="offline" @busy="offlineBusy = $event" @screen="offlineScreen = $event" />
         <PatrolHome v-else-if="!detail && tab === 'home'" :summary="summary" :missed="missedCount" :loading="loading" :failed="!!error" :missed-failed="missedError" :project-selected="!!patrolProject" @enter="enter" @tasks="enterTasks" @refresh="load()" />
         <div v-else-if="!patrolProject" class="empty">{{ t('Mobile.chooseProjectFirst') }}</div>
@@ -149,7 +150,7 @@ onUnmounted(() => {
             <label v-if="historyScope === 'authorized' && canReadProjectHistory"><span>{{ t('Mobile.user') }}</span><SelectField v-model="historyFilters.userId" :options="people.map(item => ({ value: item.id!, label: item.name }))" clearable /></label>
             <label :class="{ 'filter-wide': historyScope !== 'authorized' || !canReadProjectHistory }"><span>{{ t('Mobile.pointName') }}</span><Field v-model="historyFilters.pointName" :maxlength="128" :placeholder="t('Mobile.namePlaceholder')" /></label>
             <div class="filter-date-range"><span>{{ t('Mobile.filterDate') }}</span><DateField v-model="historyFilters.from" :max="historyFilters.to" :label="t('Mobile.historyFrom')" /><span class="date-separator" aria-hidden="true">—</span><DateField v-model="historyFilters.to" :min="historyFilters.from" :label="t('Mobile.historyTo')" /></div>
-            <Alert v-if="filterError" class="filter-wide" type="warning" :message="t('Mobile.filterOptionsFailed')" />
+            <Alert v-if="filterError" floating inline class="filter-wide" type="warning" :message="t('Mobile.filterOptionsFailed')" />
             <div class="history-filter-actions filter-wide"><Button :disabled="loading" @click="searchHistory(true)">{{ t('Mobile.reset') }}</Button><Button native-type="submit" type="primary" :loading="loading">{{ t('Mobile.search') }}</Button></div>
           </form>
           <div v-if="loading && !records.length" class="empty"><Spin /></div>
@@ -173,6 +174,7 @@ onUnmounted(() => {
             <p>{{ t('Mobile.progress', { done: selected.task.completedCount, total: selected.task.requiredCount }) }}</p>
             <Alert v-if="!selected.executable" type="warning" :message="t(reason(selected.reason))" show-icon />
           </section>
+          <LocationPanel :reference="patrolLocation.reference.value" :evidence="patrolLocation.evidence.value" :locating="patrolLocation.locating.value" :locked="locked" @refresh="patrolLocation.refresh" />
           <form @submit.prevent="submit">
             <CheckForm :items="selected.task.standardSnapshot" :answers="draft.answers" :errors="errors" :images="images"
               :locked="locked || !selected.executable" @answer="changeAnswer" @upload="upload" @preview="preview" />

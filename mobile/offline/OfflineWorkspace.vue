@@ -8,11 +8,12 @@ import Alert from '../components/Notice.vue'
 import { useI18n } from '../i18n'
 import { dateTime } from '../../model/display'
 import CheckForm from '../components/CheckForm.vue'
+import LocationPanel from '../components/LocationPanel.vue'
 import RecordDetails from '../components/RecordDetails.vue'
 import { useOfflinePatrol } from './useOfflinePatrol'
 const emit = defineEmits<{ busy: [value: boolean]; screen: [value: { key: string; depth: number }] }>()
 const { t, te } = useI18n()
-const { data, selected, viewed, answers, remark, images, errors, error, notice, loading, downloading, saving, syncing,
+const { location: patrolLocation, data, selected, viewed, answers, remark, images, errors, error, notice, loading, downloading, saving, syncing,
   networkOnline, workingOffline, tab, keyword, busy, canNetwork, pending, filtered, dirty, download, reason, open, close, answer, photo, save, view, sync } = useOfflinePatrol()
 const active = computed(() => selected.value || viewed.value?.row)
 const readOnly = computed(() => !!viewed.value || busy.value)
@@ -43,6 +44,7 @@ defineExpose({ back })
       </section>
       <RecordDetails v-if="viewed?.record" :record="viewed.record" :images="images" @preview="previewError" />
       <form v-else @submit.prevent="save">
+        <LocationPanel v-if="!viewed" :reference="patrolLocation.reference.value" :evidence="patrolLocation.evidence.value" :locating="patrolLocation.locating.value" :locked="busy" @refresh="patrolLocation.refresh" />
         <CheckForm :items="active.task.standardSnapshot" :answers="viewed?.submission.answers || answers" :errors="errors" :images="images" :locked="readOnly" @answer="answer" @upload="photo" @preview="previewError" />
         <section class="panel"><label>{{ t('Mobile.remark') }}</label><Field type="textarea" v-if="!viewed" v-model="remark" :rows="3" :maxlength="1000" :disabled="busy" /><p v-else>{{ viewed.submission.remark || '—' }}</p></section>
         <Alert type="info" show-icon :message="t('Mobile.offlineSaveHint')" />

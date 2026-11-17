@@ -2,13 +2,21 @@
 import { Field } from 'vant'
 import { Radio, RadioGroup } from 'vant'
 import Image from './EvidenceImage.vue'
-import { watch } from 'vue'
+import {computed,ref,watch} from 'vue'
+import Alert from './Notice.vue'
 import { useI18n } from '../i18n'
 import type { Answer, CheckItem } from '../../api/types'
 import { itemType } from '../../model/standards'
 const props = defineProps<{ items: CheckItem[]; answers: Answer[]; errors: Record<string, string>; images: Record<string, string>; locked: boolean }>()
 const emit = defineEmits<{ answer: [id: string, value: string]; upload: [id: string, file: File]; preview: [id: string] }>()
 const { t } = useI18n()
+const validationRevision=ref(0)
+const firstError=computed(()=>{
+ const item=props.items.find(item=>props.errors[item.id])
+ return item?`${item.title}：${t(props.errors[item.id]||'')}`:''
+})
+// 每次校验都重新提醒首个错误，字段旁保留具体原因供定位和修改。
+watch(()=>props.errors,()=>{validationRevision.value++},{deep:true})
 watch(() => [props.items, props.answers] as const, ([items, answers]) => {
   const ids = [...items.map(row => row.exampleFileId), ...answers.map(row => row.attachmentId)]
   for (const id of new Set(ids.filter((id): id is string => !!id))) if (!props.images[id]) emit('preview', id)
@@ -21,6 +29,7 @@ function choose(id: string, event: Event) {
 }
 </script>
 <template>
+  <Alert v-if="firstError" :key="validationRevision" type="error" :message="firstError" />
   <section v-for="(item, index) in items" :key="item.id" class="panel check-item">
     <h3 :id="`label-${item.id}`"><span class="item-no">{{ index + 1 }}</span>{{ item.title }}
       <span v-if="item.required" class="required">{{ t('Mobile.mandatory') }}</span></h3>

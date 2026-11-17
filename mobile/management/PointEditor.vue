@@ -8,6 +8,7 @@ import { useI18n } from '../i18n'
 import type { ConfigEntity } from '../../api/types'
 import { categoryTree } from '../../model/categories'
 import MobileProjectFilter from '../components/MobileProjectFilter.vue'
+import { usePatrolLocation } from '../location'
 const props = defineProps<{ value: ConfigEntity; categories: ConfigEntity[]; tags: ConfigEntity[]; canSave: boolean; canConfigure: boolean; saving: boolean }>()
 const emit = defineEmits<{ save: [point: ConfigEntity]; configure: [category: string]; qr: [] }>()
 const { t } = useI18n(), form = ref<FormInstance>(), model = reactive<ConfigEntity>({ name: '', enabled: true })
@@ -17,6 +18,13 @@ const categoryOptions = computed(() => categoryTree(categoryRows.value.filter(ro
 const categoryIds = computed(() => props.value.categoryIds || (props.value.categoryId ? [props.value.categoryId] : []))
 const currentCategories = computed(() => categoryIds.value.map(id => props.categories.find(row => row.id === id) || { id, name: id }))
 const tagOptions = computed(() => props.tags.filter(row => row.projectId === model.projectId && (row.enabled || model.tagIds?.includes(row.id!))).map(row => ({ value: row.id!, label: row.name })))
+const pointLocation = usePatrolLocation()
+async function updateLocation() {
+  pointLocation.reference.value = { longitude: model.longitude, latitude: model.latitude, address: model.locationAddress || model.location, rangeMeters: 100 }
+  await pointLocation.refresh()
+  const sample = pointLocation.evidence.value
+  if (sample) { model.longitude = sample.longitude; model.latitude = sample.latitude; model.locationAddress = sample.address || model.locationAddress }
+}
 const required = [{ required: true, validator: (value: string) => !!value?.trim(), message: t('Mobile.required') }]
 watch(() => model.categoryId, id => {
   if (model.id) return
@@ -44,6 +52,10 @@ async function save() {
     </Field>
     <Field v-model="model.nfcCode" :label="t('Mobile.nfcCode')" :maxlength="128" />
     <Field v-model="model.location" name="location" :label="t('Mobile.pointLocation')" :maxlength="255" :rules="required" />
+    <Field :label="t('Patrol.geo.longitude')" :model-value="model.longitude == null ? '—' : model.longitude.toFixed(6)" readonly />
+    <Field :label="t('Patrol.geo.latitude')" :model-value="model.latitude == null ? '—' : model.latitude.toFixed(6)" readonly />
+    <Field v-model="model.locationAddress" :label="t('Patrol.geo.address')" :maxlength="255" />
+    <Button v-if="canSave" plain type="primary" :loading="pointLocation.locating.value" :disabled="saving" @click="updateLocation">{{ t('Mobile.geo.updateCoordinates') }}</Button>
     <SelectField v-model="model.tagIds" :label="t('Patrol.tags')" multiple :options="tagOptions" :disabled="saving || !canSave || !tags.length" />
     <Field :label="t('Patrol.enabled')"><template #input><Switch v-model="model.enabled" :disabled="!canSave || saving" /></template></Field>
     <Field v-model="model.description" type="textarea" :label="t('Mobile.remark')" :maxlength="512" :rows="3" />

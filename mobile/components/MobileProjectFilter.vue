@@ -2,6 +2,7 @@
   <div class="mobile-project-filter">
     <label :for="local ? 'patrol-mobile-editor-project' : 'patrol-mobile-project'">{{ t('Patrol.projects.label') }}</label>
     <SelectField :model-value="selectedValue" :options="options" :placeholder="t('Mobile.chooseProject')" :clearable="!local" :disabled="disabled || loading" @update:model-value="select" />
+    <Alert v-if="failed" type="error" :message="t('Patrol.projects.failed')" />
     <div v-if="failed" class="project-load-error" role="alert"><span>{{ t('Patrol.projects.failed') }}</span><Button @click="load">{{ t('Mobile.refresh') }}</Button></div>
   </div>
 </template>
@@ -9,6 +10,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { Button } from 'vant'
 import SelectField from './SelectField.vue'
+import Alert from './Notice.vue'
 
 import { useI18n } from '../i18n'
 import { request } from '../transport'

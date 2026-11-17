@@ -546,6 +546,18 @@
       "busy": "当前导出任务较多，请稍后重试。",
       "not_ready": "文件尚未准备完成，请稍后重试。",
       "failed": "巡更记录导出失败，请稍后重试。"
+    },
+    "geo": {
+      "longitude": "经度",
+      "latitude": "纬度",
+      "coordinates": "打卡经纬度",
+      "address": "定位地址",
+      "range": "允许打卡范围",
+      "rangeHint": "以点位为中心的半径，默认100米。定位仅作提醒，不限制巡更提交。",
+      "meters": "米",
+      "coordinatePair": "请同时填写经度和纬度",
+      "distance": "距点位距离",
+      "accuracy": "定位精度"
     }
   }
 }

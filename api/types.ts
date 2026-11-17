@@ -60,6 +60,10 @@ export interface ConfigEntity {
   warningCode?: string
   colorHex?: string
   location?: string
+  longitude?: number | null
+  latitude?: number | null
+  locationAddress?: string
+  checkInRange?: number | null
   nfcCode?: string
   items?: CheckItem[]
   userIds?: string[]
@@ -126,6 +130,7 @@ export interface Task {
   categoryId?: string
   categoryName?: string
   standardSnapshot: CheckItem[]
+  locationReference?: LocationReference | null
 }
 export interface Answer {
   itemId: string
@@ -134,7 +139,10 @@ export interface Answer {
 }
 export type NetworkStatus = 'online' | 'offline'
 /** 客户端报告的采集信息；历史记录允许缺失，不回填成服务器接收时间。 */
-export interface CollectionMetadata { collectedTime?: number | null; networkStatus?: NetworkStatus | null }
+export interface LocationReference { longitude?: number | null; latitude?: number | null; address?: string | null; rangeMeters: number }
+export interface LocationEvidence { longitude: number; latitude: number; accuracy: number; collectedTime: number; address?: string; coordinateSystem: 'WGS84'; source: 'device' | 'demo' }
+export interface LocationSnapshot { evidence: LocationEvidence; reference: LocationReference; distanceMeters?: number | null; withinRange?: boolean | null }
+export interface CollectionMetadata { collectedTime?: number | null; networkStatus?: NetworkStatus | null; location?: LocationEvidence | null }
 export interface Execution {
   projectId?: string
   projectName?: string
@@ -155,6 +163,7 @@ export interface Execution {
   userName: string
   collectedTime?: number | null
   networkStatus?: NetworkStatus | EnumValue<NetworkStatus> | null
+  location?: LocationSnapshot | null
   receiveTime: number
   remark?: string
   answers: Answer[]

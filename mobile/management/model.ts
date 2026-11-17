@@ -16,7 +16,10 @@ export function pointQuery(name: string, categoryId: string, pageIndex = 0): Que
 export function pointPayload(value: ConfigEntity): ConfigEntity {
   return { id: value.id, name: value.name.trim(), code: value.code?.trim(), enabled: value.enabled,
     projectId: value.projectId, categoryId: value.categoryId, tagIds: [...(value.tagIds || [])],
-    location: value.location?.trim(), description: value.description || '', nfcCode: value.nfcCode }
+    location: value.location?.trim(), description: value.description || '', nfcCode: value.nfcCode,
+    ...(value.longitude !== undefined ? { longitude: value.longitude } : {}),
+    ...(value.latitude !== undefined ? { latitude: value.latitude } : {}),
+    ...(value.locationAddress !== undefined ? { locationAddress: value.locationAddress } : {}) }
 }
 export function rulesValid(rules: RoleRule[]): boolean {
   return rules.every(rule => !!rule.levelId === !!rule.standardId) && new Set(rules.map(rule => rule.roleId)).size === rules.length

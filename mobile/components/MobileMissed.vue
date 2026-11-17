@@ -46,7 +46,7 @@ watch(state, () => { selection.value = [] })
   <Button block type="primary" :disabled="!submittable || saving" @click="reason = ''; invalid = false; open = true">{{ t('Patrol.missed.apply') }} ({{ selection.length }})</Button>
   <Dialog :teleport="popupTarget" :show="open" show-cancel-button :before-close="action => action === 'cancel' ? !saving : false" :title="t('Patrol.missed.apply')" :confirm-button-text="t('Mobile.confirm')" :cancel-button-text="t('Mobile.cancel')"  :close-on-click-overlay="false" @confirm="apply" @cancel="!saving && (open = false)">
     <Field type="textarea" v-model="reason" :rows="4" :maxlength="500" show-word-limit :placeholder="t('Patrol.missed.reason')" />
-    <Alert v-if="invalid" type="error" :message="t('Patrol.missed.reasonRequired')" />
+    <Alert v-if="invalid" type="error" @update:message="invalid=false" :message="t('Patrol.missed.reasonRequired')" />
   </Dialog>
   <Dialog :teleport="popupTarget" :show="!!events" :title="t('Patrol.missed.history')" :confirm-button-text="t('Mobile.confirm')" @confirm="events = undefined">
     <div class="dialog-body"><Spin v-if="historyLoading" /><div v-for="event in events" :key="event.id" class="panel">

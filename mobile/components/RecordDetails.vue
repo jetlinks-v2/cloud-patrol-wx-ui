@@ -19,6 +19,13 @@ watch(() => props.record, record => { for (const id of new Set(record.answers.ma
       <dt v-if="record.levelName">{{ t('Mobile.level') }}</dt><dd v-if="record.levelName">{{ record.levelName }}</dd>
       <dt>{{ t('Mobile.collected') }}</dt><dd>{{ record.collectedTime == null ? t('Mobile.unrecorded') : dateTime(record.collectedTime) }}</dd>
       <dt>{{ t('Mobile.networkStatus') }}</dt><dd>{{ t(`Mobile.networkStates.${enumValue(record.networkStatus) ?? 'unrecorded'}`) }}</dd>
+      <template v-if="record.location">
+        <dt>{{ t('Patrol.geo.address') }}</dt><dd>{{ record.location.evidence.address || '—' }}</dd>
+        <dt>{{ t('Patrol.geo.coordinates') }}</dt><dd>{{ record.location.evidence.longitude.toFixed(6) }}, {{ record.location.evidence.latitude.toFixed(6) }}</dd>
+        <dt>{{ t('Patrol.geo.range') }}</dt><dd>{{ record.location.reference.rangeMeters }} {{ t('Patrol.geo.meters') }}</dd>
+        <dt>{{ t('Patrol.geo.distance') }}</dt><dd>{{ record.location.distanceMeters == null ? '—' : `${record.location.distanceMeters} ${t('Patrol.geo.meters')}` }}</dd>
+        <dt>{{ t('Patrol.geo.accuracy') }}</dt><dd>±{{ record.location.evidence.accuracy }} {{ t('Patrol.geo.meters') }}</dd>
+      </template>
       <dt>{{ t('Mobile.received') }}</dt><dd>{{ dateTime(record.receiveTime) }}</dd>
     </dl>
   </section>
