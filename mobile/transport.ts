@@ -20,7 +20,7 @@ export interface PatrolHost {
   request<T>(path: string, method: PatrolMethod, body?: unknown, options?: { projectId?: string }): Promise<T>
   /** 可选：H5 首页返回时交给宿主关闭 WebView；不是平台已存在的 Bridge 名称。 */
   back?(): void
-  /** 可选真实定位契约：必须返回 WGS84；未接入时演示模式不调用。 */
+  /** 可选真实定位契约：必须返回 WGS84；未接入时使用浏览器定位。 */
   getLocation?(): Promise<import('../api/types').LocationEvidence>
 }
 declare global { interface Window { patrolHost?: PatrolHost } }

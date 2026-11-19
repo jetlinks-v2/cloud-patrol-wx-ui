@@ -7,7 +7,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onScopeDispose, ref } from 'vue'
 import { Button } from 'vant'
 import SelectField from './SelectField.vue'
 import Alert from './Notice.vue'
@@ -20,16 +20,22 @@ const props = defineProps<{ disabled?: boolean; local?: boolean; value?: string 
 const emit = defineEmits<{ 'update:value': [value?: string] }>()
 const { t } = useI18n()
 const nodes = ref<OrganizationNode[]>([]), loading = ref(false), failed = ref(false)
+let disposed = false
+onScopeDispose(() => { disposed = true })
 const options = computed(() => projectTree(nodes.value))
 const selectedValue = computed(() => props.local ? props.value : patrolProject.value)
 async function load() {
   loading.value = true; failed.value = false
   // 重新取授权树时不携带旧项目筛选，撤权或改为普通组织后仍可恢复选择。
-  try { nodes.value = await request<OrganizationNode[]>('/park/patrol/projects/_tree', 'GET', undefined, '')
+  try {
+    const data = await request<OrganizationNode[]>('/park/patrol/projects/_tree', 'GET', undefined, '')
+    // 选择器只属于首页；离开首页后，迟到响应不能清空子页面沿用的项目。
+    if (disposed) return
+    nodes.value = data
     const selected = findOrganization(nodes.value, selectedValue.value)
     if (selectedValue.value && (!selected || projectTree([selected])[0]?.disabled)) select(undefined)
-  } catch { failed.value = true; nodes.value = []; select(undefined) }
-  finally { loading.value = false }
+  } catch { if (!disposed) { failed.value = true; nodes.value = []; select(undefined) } }
+  finally { if (!disposed) loading.value = false }
 }
 function select(value: unknown) {
   const update = (id?: string) => props.local ? emit('update:value', id) : (patrolProject.value = id)

@@ -20,6 +20,7 @@ watch(() => props.record, record => { for (const id of new Set(record.answers.ma
       <dt>{{ t('Mobile.collected') }}</dt><dd>{{ record.collectedTime == null ? t('Mobile.unrecorded') : dateTime(record.collectedTime) }}</dd>
       <dt>{{ t('Mobile.networkStatus') }}</dt><dd>{{ t(`Mobile.networkStates.${enumValue(record.networkStatus) ?? 'unrecorded'}`) }}</dd>
       <template v-if="record.location">
+        <dt v-if="record.location.evidence.source === 'demo'">{{ t('Mobile.geo.title') }}</dt><dd v-if="record.location.evidence.source === 'demo'">{{ t('Mobile.geo.legacyDemo') }}</dd>
         <dt>{{ t('Patrol.geo.address') }}</dt><dd>{{ record.location.evidence.address || '—' }}</dd>
         <dt>{{ t('Patrol.geo.coordinates') }}</dt><dd>{{ record.location.evidence.longitude.toFixed(6) }}, {{ record.location.evidence.latitude.toFixed(6) }}</dd>
         <dt>{{ t('Patrol.geo.range') }}</dt><dd>{{ record.location.reference.rangeMeters }} {{ t('Patrol.geo.meters') }}</dd>

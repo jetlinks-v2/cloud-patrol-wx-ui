@@ -147,6 +147,26 @@ export function useMobilePatrol() {
     records.value = []; total.value = 0; page.value = 0
     void load()
   }
+  /** 冷却结束只重新核验资格和计数，保留检查快照、草稿与定位，不按本机时钟开放提交。 */
+  async function refreshEligibility() {
+    if (locked.value || loading.value) return
+    const current = ++version, projectId = patrolProject.value, active = selected.value
+    if (!projectId) return
+    loading.value = true; error.value = ''
+    try {
+      const data = await api.myTasks(date.value, mine.value)
+      if (disposed || current !== version || projectId !== patrolProject.value) return
+      rows.value = data
+      if (active && selected.value === active && !locked.value) {
+        const latest = data.find(row => row.task.id === active.task.id)
+        selected.value = { ...active, executable: latest?.executable ?? false,
+          reason: latest?.reason ?? 'error.patrol.reference.unavailable',
+          task: { ...active.task, ...(latest ? { completedCount: latest.task.completedCount,
+            lastExecutionTime: latest.task.lastExecutionTime, cooldownMinutes: latest.task.cooldownMinutes } : {}) } }
+      }
+    } catch (cause) { if (!disposed && current === version) fail(cause) }
+    finally { if (!disposed && current === version) loading.value = false }
+  }
   function open(row: MobileTask) {
     selected.value = row; record.value = undefined; success.value = undefined; error.value = ''; errors.value = {}
     draft.value = drafts.get(row.task.id) || { answers: row.task.standardSnapshot.map(item => ({ itemId: item.id })), remark: '' }
@@ -226,5 +246,5 @@ export function useMobilePatrol() {
     } finally { sending.value = false }
   }
   return { location, context, date, tab, mine, missedCount, missedError, historyScope, canReadProjectHistory, people, categories, levels, historyFilters, filterError, searchHistory, loadHistoryOptions, rows, records, selected, record, success, loading, sending, uploading,
-    error, draft, errors, images, total, locked, reason, load, open, leave, changeAnswer, upload, preview, submit, scanPoint, scanNfc }
+    error, draft, errors, images, total, locked, reason, load, refreshEligibility, open, leave, changeAnswer, upload, preview, submit, scanPoint, scanNfc }
 }

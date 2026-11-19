@@ -7,7 +7,6 @@ import { Button, Switch } from 'vant'
 import { useI18n } from '../i18n'
 import type { ConfigEntity } from '../../api/types'
 import { categoryTree } from '../../model/categories'
-import MobileProjectFilter from '../components/MobileProjectFilter.vue'
 import { usePatrolLocation } from '../location'
 const props = defineProps<{ value: ConfigEntity; categories: ConfigEntity[]; tags: ConfigEntity[]; canSave: boolean; canConfigure: boolean; saving: boolean }>()
 const emit = defineEmits<{ save: [point: ConfigEntity]; configure: [category: string]; qr: [] }>()
@@ -43,8 +42,7 @@ async function save() {
 </script>
 <template>
   <Form ref="form" class="panel point-editor" :disabled="!canSave || saving" @submit="save">
-    <MobileProjectFilter v-if="!model.id" v-model:value="model.projectId" local disabled />
-    <Field v-else :label="t('Patrol.projects.label')" :model-value="value.projectName || value.projectId" readonly />
+    <Field v-if="model.id" :label="t('Patrol.projects.label')" :model-value="value.projectName || value.projectId" readonly />
     <Field v-model="model.name" name="name" :label="t('Mobile.pointName')" :maxlength="128" :rules="required" />
     <Field v-model="model.code" :label="t('Patrol.code')" :maxlength="64" :placeholder="t('Mobile.codeAuto')" />
     <Field v-if="!model.id" name="categoryId" :rules="[{ validator: () => !!model.categoryId, message: t('Mobile.required') }]">
@@ -56,6 +54,7 @@ async function save() {
     <Field :label="t('Patrol.geo.latitude')" :model-value="model.latitude == null ? '—' : model.latitude.toFixed(6)" readonly />
     <Field v-model="model.locationAddress" :label="t('Patrol.geo.address')" :maxlength="255" />
     <Button v-if="canSave" plain type="primary" :loading="pointLocation.locating.value" :disabled="saving" @click="updateLocation">{{ t('Mobile.geo.updateCoordinates') }}</Button>
+    <p v-if="pointLocation.error.value" class="field-error" role="status">{{ t(pointLocation.error.value) }}</p>
     <SelectField v-model="model.tagIds" :label="t('Patrol.tags')" multiple :options="tagOptions" :disabled="saving || !canSave || !tags.length" />
     <Field :label="t('Patrol.enabled')"><template #input><Switch v-model="model.enabled" :disabled="!canSave || saving" /></template></Field>
     <Field v-model="model.description" type="textarea" :label="t('Mobile.remark')" :maxlength="512" :rows="3" />

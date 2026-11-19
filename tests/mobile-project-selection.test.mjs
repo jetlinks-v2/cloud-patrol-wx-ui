@@ -79,3 +79,40 @@ test('H5未选项目不查询，选定后按项目查询，清空项目后旧响
     delete globalThis.__patrolProjectFixture
   }
 })
+
+test('离开首页后授权树迟到或失败不清空当前项目；留在首页时仍校验撤权', async () => {
+  const { readFileSync } = await import('node:fs')
+  const { parse, compileScript } = await import('vue/compiler-sfc')
+  const { ref, nextTick } = await import('vue')
+  const root = fileURLToPath(new URL('..', import.meta.url))
+  const result = await build({ entryPoints: [root + '/mobile/components/MobileProjectFilter.vue'], bundle: true, write: false, platform: 'node', format: 'cjs', external: ['vue'], plugins: [{ name: 'project-filter-lifecycle', setup(builder) {
+    builder.onResolve({ filter: /^(vant|\.\.\/i18n|\.\.\/transport|\.\.\/projectScope)$/ }, args => ({ path: args.path, namespace: 'filter-fixture' }))
+    builder.onLoad({ filter: /.*/, namespace: 'filter-fixture' }, args => ({ contents: {
+      vant: `export const Button='button'`,
+      '../i18n': `export const useI18n=()=>({t:key=>key})`,
+      '../transport': `export const request=()=>globalThis.__projectFilter.response`,
+      '../projectScope': `export const patrolProject=globalThis.__projectFilter.project`,
+    }[args.path] }))
+    builder.onLoad({ filter: /\.vue$/ }, args => {
+      if (!args.path.endsWith('/MobileProjectFilter.vue')) return { contents: `export default {render:()=>null}` }
+      const { descriptor } = parse(readFileSync(args.path, 'utf8'), { filename: args.path })
+      return { contents: compileScript(descriptor, { id: 'project-filter-lifecycle', inlineTemplate: true }).content, loader: 'ts', resolveDir: root + '/mobile/components' }
+    })
+  }}] })
+  const renderer = createRenderer({ insert() {}, remove() {}, createElement: () => ({}), createText: () => ({}), createComment: () => ({}), setText() {}, setElementText() {}, parentNode() {}, nextSibling() {}, patchProp() {} })
+  try {
+    for (const scenario of ['late-empty', 'late-failure', 'active-empty']) {
+      let resolve, reject
+      const project = ref('project-a'), response = new Promise((yes, no) => { resolve = yes; reject = no })
+      globalThis.__projectFilter = { project, response }
+      const loaded = { exports: {} }
+      new Function('require', 'module', 'exports', result.outputFiles[0].text)(createRequire(import.meta.url), loaded, loaded.exports)
+      const app = renderer.createApp(loaded.exports.default); app.mount({})
+      if (scenario !== 'active-empty') app.unmount()
+      if (scenario === 'late-failure') reject(new Error('offline')); else resolve([])
+      await new Promise(resolve => setImmediate(resolve)); await nextTick()
+      assert.equal(project.value, scenario === 'active-empty' ? undefined : 'project-a', scenario)
+      if (scenario === 'active-empty') app.unmount()
+    }
+  } finally { delete globalThis.__projectFilter }
+})

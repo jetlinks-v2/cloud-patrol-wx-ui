@@ -1,6 +1,6 @@
 import type { Answer, CheckItem, Task, CollectionMetadata } from '../api/types'
 import { itemType } from '../model/standards'
-export interface MobileTask { task: Task; executable: boolean; reason: string }
+export interface MobileTask { task: Task; executable: boolean; reason: string; locationReferenceError?: 'Mobile.geo.referenceLoadFailed' }
 export interface Submission extends CollectionMetadata { taskId: string; requestId: string; answers: Answer[]; remark: string }
 /** 后端决定合格/不合格；前端只校验必填、选项、数字格式和附件是否齐全。 */
 export function answerErrors(items: CheckItem[], answers: Answer[]): Record<string, string> {

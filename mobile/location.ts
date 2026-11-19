@@ -1,26 +1,27 @@
 import { computed, onScopeDispose, ref } from 'vue'
 import type { LocationEvidence, LocationReference, Task } from '../api/types'
 
-/** 当前APP真实定位能力不可用（尚未提供定位桥接），默认演示采样；此限制仅记录于代码，不在业务页面展示。
- * 真机接入使用 VITE_PATROL_LOCATION_MODE=device；禁止将 demo 当作到场证明。
- */
-const DEMO_MODE = import.meta.env.VITE_PATROL_LOCATION_MODE !== 'device'
-const DEMO_CENTER = { longitude: 106.551556, latitude: 29.563009 }
 export function referenceFor(task: Task): LocationReference {
   return { ...task.locationReference, rangeMeters: task.locationReference?.rangeMeters ?? 100 }
 }
-export function demoLocation(reference: LocationReference, now = Date.now()): LocationEvidence {
-  const latitude = reference.latitude ?? DEMO_CENTER.latitude
-  const longitude = reference.longitude ?? DEMO_CENTER.longitude
-  // 稳定约28米偏移，重定位不会随机跳出范围；缺失参考只在演示中使用重庆中心坐标。
-  return { longitude: longitude + 0.00018, latitude: latitude + 0.00020, accuracy: 18,
-    collectedTime: now, coordinateSystem: 'WGS84', source: 'demo', address: reference.address || '点位附近' }
+/** 只把设备返回的 WGS84 样本作为定位依据；旧演示记录不参与实际距离判断。 */
+export function isDeviceLocation(value?: LocationEvidence | null): value is LocationEvidence {
+  return !!value && value.coordinateSystem === 'WGS84' && value.source === 'device'
+    && Number.isFinite(value.latitude) && Math.abs(value.latitude) <= 90
+    && Number.isFinite(value.longitude) && Math.abs(value.longitude) <= 180
+    && Number.isFinite(value.accuracy) && value.accuracy >= 0 && value.accuracy <= 100000
+    && Number.isFinite(value.collectedTime) && value.collectedTime > 0
+}
+export function hasLocationCoordinates(reference?: Pick<LocationReference, 'latitude' | 'longitude'> | null): reference is { latitude: number; longitude: number } {
+  return !!reference && typeof reference.latitude === 'number' && Number.isFinite(reference.latitude) && Math.abs(reference.latitude) <= 90
+    && typeof reference.longitude === 'number' && Number.isFinite(reference.longitude) && Math.abs(reference.longitude) <= 180
+}
+export function hasLocationReference(reference: LocationReference): reference is LocationReference & { latitude: number; longitude: number } {
+  return hasLocationCoordinates(reference) && Number.isFinite(reference.rangeMeters) && reference.rangeMeters > 0
 }
 export function distanceTo(reference: LocationReference, evidence?: LocationEvidence | null): number | undefined {
-  if (!evidence) return undefined
-  const latitude = reference.latitude ?? (evidence.source === 'demo' ? DEMO_CENTER.latitude : undefined)
-  const longitude = reference.longitude ?? (evidence.source === 'demo' ? DEMO_CENTER.longitude : undefined)
-  if (latitude == null || longitude == null) return undefined
+  if (!isDeviceLocation(evidence) || !hasLocationReference(reference)) return undefined
+  const latitude = reference.latitude, longitude = reference.longitude
   const rad = Math.PI / 180, dLat = (evidence.latitude - latitude) * rad, dLng = (evidence.longitude - longitude) * rad
   const a = Math.sin(dLat / 2) ** 2 + Math.cos(latitude * rad) * Math.cos(evidence.latitude * rad) * Math.sin(dLng / 2) ** 2
   return Math.round(6371008.8 * 2 * Math.asin(Math.sqrt(Math.min(1, a))) * 10) / 10
@@ -32,49 +33,59 @@ export function locationStatus(reference: LocationReference, evidence?: Location
   if (evidence.accuracy > reference.rangeMeters) return 'inaccurate'
   return distance <= reference.rangeMeters ? 'inside' : 'outside'
 }
-function validEvidence(value: LocationEvidence): boolean {
-  return value.coordinateSystem === 'WGS84' && value.source === 'device'
-    && Number.isFinite(value.latitude) && Math.abs(value.latitude) <= 90
-    && Number.isFinite(value.longitude) && Math.abs(value.longitude) <= 180
-    && Number.isFinite(value.accuracy) && value.accuracy >= 0 && value.accuracy <= 100000
-    && Number.isFinite(value.collectedTime) && value.collectedTime > 0
-}
+/** 优先使用宿主已有定位；无宿主能力时使用浏览器定位，不生成替代坐标。 */
 async function deviceLocation(): Promise<LocationEvidence> {
   if (window.patrolHost?.getLocation) {
     const sample = await window.patrolHost.getLocation()
-    if (!validEvidence(sample)) throw new Error('Invalid location')
-    return sample
+    if (!isDeviceLocation(sample)) throw new Error('Mobile.geo.invalid')
+    return { ...sample }
   }
+  if (!window.isSecureContext) throw new Error('Mobile.geo.insecure')
+  if (!navigator.geolocation) throw new Error('Mobile.geo.unsupported')
   return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) { reject(new Error('Location unavailable')); return }
-    navigator.geolocation.getCurrentPosition(position => resolve({
-      longitude: position.coords.longitude, latitude: position.coords.latitude, accuracy: position.coords.accuracy,
-      collectedTime: position.timestamp, coordinateSystem: 'WGS84', source: 'device',
-    }), reject, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 })
+    navigator.geolocation.getCurrentPosition(position => {
+      const sample: LocationEvidence = {
+        longitude: position.coords.longitude, latitude: position.coords.latitude, accuracy: position.coords.accuracy,
+        collectedTime: position.timestamp, coordinateSystem: 'WGS84', source: 'device',
+      }
+      if (isDeviceLocation(sample)) resolve(sample)
+      else reject(new Error('Mobile.geo.invalid'))
+    }, cause => reject(new Error(cause.code === 1 ? 'Mobile.geo.denied' : cause.code === 3 ? 'Mobile.geo.timeout' : 'Mobile.geo.unavailable')),
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 })
   })
 }
 /** 采样属于当前表单，离开/切换点位后丢弃迟到结果；网络重试沿用已冻结样本。 */
 export function usePatrolLocation() {
   const evidence = ref<LocationEvidence>(), reference = ref<LocationReference>({ rangeMeters: 100 }), locating = ref(false)
+  const error = ref('')
   let generation = 0, disposed = false
   async function refresh() {
     const current = ++generation
-    locating.value = true
+    // 重定位期间清空上一份样本，避免失败后继续显示旧的‘范围内’或提交旧坐标。
+    evidence.value = undefined; error.value = ''; locating.value = true
+    let timer: ReturnType<typeof setTimeout> | undefined
     try {
-      const sample = DEMO_MODE ? demoLocation(reference.value) : await deviceLocation()
+      const sample = await Promise.race([deviceLocation(), new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('Mobile.geo.timeout')), 12000)
+      })])
       if (!disposed && current === generation) evidence.value = sample
-    } catch {
-      // 真实模式定位失败只作“待定位”，不回退成模拟到场数据，不阻断本轮辅助巡更。
-      if (!disposed && current === generation) evidence.value = undefined
-    } finally { if (!disposed && current === generation) locating.value = false }
+    } catch (cause) {
+      if (!disposed && current === generation) {
+        evidence.value = undefined
+        const key = cause instanceof Error ? cause.message : ''
+        error.value = ['Mobile.geo.invalid', 'Mobile.geo.insecure', 'Mobile.geo.unsupported', 'Mobile.geo.denied', 'Mobile.geo.timeout', 'Mobile.geo.unavailable'].includes(key)
+          ? key : 'Mobile.geo.unavailable'
+      }
+    } finally { clearTimeout(timer); if (!disposed && current === generation) locating.value = false }
   }
   function open(task: Task, sample?: LocationEvidence | null, frozen = false) {
-    generation++; evidence.value = sample ?? undefined; reference.value = referenceFor(task)
+    generation++; evidence.value = isDeviceLocation(sample) ? { ...sample } : undefined; reference.value = referenceFor(task)
+    error.value = sample && !isDeviceLocation(sample) ? 'Mobile.geo.legacyDemo' : ''; locating.value = false
     if (!frozen) void refresh()
   }
-  function clear() { generation++; evidence.value = undefined; locating.value = false }
+  function clear() { generation++; evidence.value = undefined; error.value = ''; locating.value = false }
   onScopeDispose(() => { disposed = true; generation++ })
-  return { evidence, reference, locating, open, clear, refresh,
+  return { evidence, reference, locating, error, open, clear, refresh,
     distance: computed(() => distanceTo(reference.value, evidence.value)),
     status: computed(() => locationStatus(reference.value, evidence.value)) }
 }

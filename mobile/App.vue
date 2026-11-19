@@ -19,7 +19,7 @@ import MobileMissed from './components/MobileMissed.vue'
 import PatrolHome from './components/PatrolHome.vue'
 import OfflineWorkspace from './offline/OfflineWorkspace.vue'
 import { homeSummary, homeTasks, type HomeTaskState } from './home'
-import { pointGroups, type PointGroup } from './points'
+import { cooldownClock, cooldownRemaining, pointGroups, type PointGroup } from './points'
 import { useMobilePatrol } from './useMobilePatrol'
 import { host, hostState } from './transport'
 import { useWebView } from './useWebView'
@@ -35,7 +35,7 @@ const missingQueryPermission = computed(() => {
     ['patrol-task', 'patrol-point'].includes(permission.id) && permission.actions.includes('query'))
 })
 const { location: patrolLocation, date, tab, mine, missedCount, missedError, historyScope, canReadProjectHistory, people, categories, levels, historyFilters, filterError, searchHistory, loadHistoryOptions, rows, records, selected, record, success, loading, sending, uploading,
-  error, draft, errors, images, total, locked, reason, load, open, leave, changeAnswer, upload, preview, submit, scanPoint, scanNfc } = useMobilePatrol()
+  error, draft, errors, images, total, locked, reason, load, refreshEligibility, open, leave, changeAnswer, upload, preview, submit, scanPoint, scanNfc } = useMobilePatrol()
 const point = ref<PointGroup>(), now = ref(Date.now()), missedOpen = ref(false), missedBusy = ref(false), scanOpen = ref(false), nfcMode = ref(false)
 const offlineOpen = ref(false)
 const offline = ref<{ back(): void }>(), offlineBusy = ref(false), offlineScreen = ref({ key: 'offline', depth: 1 })
@@ -55,7 +55,18 @@ const scrollTop = inject('business-scroll-top', () => window.scrollTo(0, 0))
 watch(() => screen.value.key, () => { void nextTick(scrollTop) })
 const heading = computed(() => t(offlineOpen.value ? 'Mobile.offlineTitle' : scanOpen.value ? nfcMode.value ? 'Mobile.nfcTitle' : 'Mobile.scanTitle' : missedOpen.value ? 'Patrol.missed.title' : selected.value ? 'Mobile.inspectionTitle' : record.value ? 'Mobile.recordTitle'
   : point.value ? 'Mobile.pointDetails' : tab.value === 'manage' ? managementScreen.value.title : tab.value === 'home' ? 'Mobile.homeTitle' : tab.value === 'history' ? 'Mobile.historyTitle' : 'Mobile.pointsTitle'))
-let timer: ReturnType<typeof setInterval>
+let timer: ReturnType<typeof setInterval>, clockTimer: ReturnType<typeof setInterval>
+const refreshedCooldowns = new Set<string>()
+const cooldownRows = computed(() => selected.value ? [selected.value] : point.value ? activePoint.value?.rows || [] : [])
+// 同一冷却截止只自动核验一次；失败保留手动刷新，避免时钟偏差导致每秒轮询。
+watch([now, cooldownRows, locked, loading], () => {
+  if (document.hidden || locked.value || loading.value) return
+  const expired = cooldownRows.value.filter(row => cooldownRemaining(row, now.value) === 0)
+  const keys = expired.map(row => `${row.task.id}:${row.task.lastExecutionTime}:${row.task.cooldownMinutes}`)
+  if (keys.some(key => !refreshedCooldowns.has(key))) {
+    keys.forEach(key => refreshedCooldowns.add(key)); void refreshEligibility()
+  }
+})
 function back() {
   if (locked.value || missedBusy.value || managementBusy.value || offlineBusy.value) return
   if (offlineOpen.value && offlineScreen.value.depth > 1) offline.value?.back()
@@ -86,6 +97,7 @@ watch([tab, patrolProject], ([value]) => { if (value === 'history') void loadHis
 watch(historyScope, () => { historyFilters.value.userId = undefined; searchHistory() })
 // 切项目清除关联筛选与旧列表，再发一次查询，避免旧项目结果或筛选残留。
 watch(patrolProject, () => {
+  refreshedCooldowns.clear()
   taskState.value = undefined
   historyFilters.value.categoryId = ''; historyFilters.value.levelId = ''; historyFilters.value.userId = undefined
   rows.value = []; records.value = []; total.value = 0
@@ -108,9 +120,11 @@ onMounted(() => {
   void load(); window.addEventListener('beforeunload', beforeUnload)
   document.addEventListener('visibilitychange', resume); window.addEventListener('pageshow', resume)
   timer = setInterval(() => { now.value = Date.now(); if (!error.value) resume() }, 60000)
+  // 用绝对时间重算，后台暂停/恢复后不累计 setInterval 的计时漂移。
+  clockTimer = setInterval(() => { if (!document.hidden) now.value = Date.now() }, 1000)
 })
 onUnmounted(() => {
-  window.removeEventListener('beforeunload', beforeUnload); clearInterval(timer)
+  window.removeEventListener('beforeunload', beforeUnload); clearInterval(timer); clearInterval(clockTimer)
   document.removeEventListener('visibilitychange', resume); window.removeEventListener('pageshow', resume)
 })
 </script>
@@ -124,7 +138,7 @@ onUnmounted(() => {
       </header>
       <main :class="{ 'has-submit': selected, 'points-home': !detail && tab === 'tasks' }">
         <Alert v-if="missingQueryPermission" class="notice" type="warning" :message="t('Mobile.applicationQueryPermissionMissing')" />
-        <MobileProjectFilter v-if="!detail && !(tab === 'manage' && managementScreen.depth > 1)" :disabled="locked || loading || managementBusy" />
+        <MobileProjectFilter v-if="!detail && tab === 'home'" :disabled="locked || loading || managementBusy" />
         <Alert v-if="!patrolProject && !offlineOpen" class="notice" type="info" show-icon :message="t('Mobile.chooseProjectFirst')" />
         <Alert v-if="error" :inline="error==='Mobile.submitUncertain'" class="notice" type="error" show-icon :message="te(error) ? t(error) : error" />
         <OfflineWorkspace v-if="offlineOpen" ref="offline" @busy="offlineBusy = $event" @screen="offlineScreen = $event" />
@@ -172,9 +186,13 @@ onUnmounted(() => {
             <p v-if="selected.task.projectName || selected.task.categoryName || selected.task.levelName" class="muted">{{ [selected.task.projectName, selected.task.categoryName, selected.task.levelName].filter(Boolean).join(' · ') }}</p>
             <p class="time-window">{{ dateTime(selected.task.startTime) }} — {{ dateTime(selected.task.endTime) }}</p>
             <p>{{ t('Mobile.progress', { done: selected.task.completedCount, total: selected.task.requiredCount }) }}</p>
-            <Alert v-if="!selected.executable" type="warning" :message="t(reason(selected.reason))" show-icon />
+            <div v-if="cooldownRemaining(selected, now) != null" class="cooldown-notice" role="timer" :aria-label="t('Mobile.cooldownRemaining')">
+              <template v-if="cooldownRemaining(selected, now)! > 0"><span>{{ t('Mobile.cooldownRemaining') }}</span><strong>{{ cooldownClock(cooldownRemaining(selected, now)!) }}</strong></template>
+              <template v-else><span>{{ t('Mobile.cooldownElapsed') }}</span><Button size="small" plain :loading="loading" :disabled="locked" @click="refreshEligibility">{{ t('Mobile.refresh') }}</Button></template>
+            </div>
+            <Alert v-else-if="!selected.executable" type="warning" :message="t(reason(selected.reason))" show-icon />
           </section>
-          <LocationPanel :reference="patrolLocation.reference.value" :evidence="patrolLocation.evidence.value" :locating="patrolLocation.locating.value" :locked="locked" @refresh="patrolLocation.refresh" />
+          <LocationPanel :reference="patrolLocation.reference.value" :evidence="patrolLocation.evidence.value" :locating="patrolLocation.locating.value" :error="patrolLocation.error.value" :reference-error="selected.locationReferenceError" :locked="locked" @refresh="patrolLocation.refresh" />
           <form @submit.prevent="submit">
             <CheckForm :items="selected.task.standardSnapshot" :answers="draft.answers" :errors="errors" :images="images"
               :locked="locked || !selected.executable" @answer="changeAnswer" @upload="upload" @preview="preview" />
@@ -194,7 +212,11 @@ onUnmounted(() => {
           <section v-for="row in activePoint.rows" :key="row.task.id" class="panel">
             <h3>{{ row.task.roleId ? row.task.roleName : t('Patrol.allStaffPatrol') }}</h3>
             <p class="time-window">{{ dateTime(row.task.startTime) }} — {{ dateTime(row.task.endTime) }}</p>
-            <p class="muted">{{ row.executable ? t('Mobile.legendReady') : t(reason(row.reason)) }}</p>
+            <div v-if="cooldownRemaining(row, now) != null" class="cooldown-notice" role="timer" :aria-label="t('Mobile.cooldownRemaining')">
+              <template v-if="cooldownRemaining(row, now)! > 0"><span>{{ t('Mobile.cooldownRemaining') }}</span><strong>{{ cooldownClock(cooldownRemaining(row, now)!) }}</strong></template>
+              <template v-else><span>{{ t('Mobile.cooldownElapsed') }}</span><Button size="small" plain :loading="loading" :disabled="locked" @click="refreshEligibility">{{ t('Mobile.refresh') }}</Button></template>
+            </div>
+            <p v-else class="muted">{{ row.executable ? t('Mobile.legendReady') : t(reason(row.reason)) }}</p>
             <div class="task-bottom"><span>{{ t('Mobile.progress', { done: row.task.completedCount, total: row.task.requiredCount }) }}</span>
               <Button :type="row.executable ? 'primary' : 'default'" @click="open(row)">{{ t(row.executable ? 'Mobile.start' : 'Mobile.details') }}</Button></div>
           </section>
@@ -203,3 +225,7 @@ onUnmounted(() => {
     </div>
   </ConfigProvider>
 </template>
+<style scoped>
+.cooldown-notice { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0; color: #7f91aa; font-size: 13px; line-height: 1.6; }
+.cooldown-notice strong { color: #947347; font-size: inherit; font-weight: 500; font-variant-numeric: tabular-nums; }
+</style>
